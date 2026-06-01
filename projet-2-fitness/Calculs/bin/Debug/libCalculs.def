@@ -1,0 +1,7 @@
+EXPORTS
+    bmi_category @1
+    calc_bmi @2
+    calc_bmi_batch @3
+    calories_batch @4
+    calories_burned @5
+    met_for_activity_ext @6
