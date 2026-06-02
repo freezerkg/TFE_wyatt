@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fitness Dashboard</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <style>
+    /* ── Variables & Reset ── */
+    :root {
+      --bg:        #0a0e1a;
+      --card:      #111827;
+      --border:    #1f2d40;
+      --green:     #00e676;
+      --green-dim: #00c853;
+      --blue:      #29b6f6;
+      --orange:    #ffa726;
+      --red:       #ef5350;
+      --text:      #e2e8f0;
+      --muted:     #64748b;
+      --font:      'Courier New', monospace;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      min-height: 100vh;
+      padding: 2rem;
+    }
+
+    /* ── Header ── */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 2rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .logo {
+      font-size: 1.4rem;
+      font-weight: bold;
+      letter-spacing: 0.1em;
+      color: var(--green);
+      text-transform: uppercase;
+    }
+
+    .logo span { color: var(--text); }
+
+    /* ── Timer de rafraîchissement ── */
+    .refresh-bar {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-size: 0.75rem;
+      color: var(--muted);
+    }
+
+    .refresh-progress {
+      width: 120px;
+      height: 3px;
+      background: var(--border);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .refresh-fill {
+      height: 100%;
+      background: var(--green);
+      border-radius: 2px;
+      transition: width 1s linear;
+    }
+
+    /* ── Sélecteur utilisateur ── */
+    .user-bar {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 2rem;
+      padding: 1rem 1.5rem;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
+
+    .user-bar label {
+      font-size: 0.75rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+
+    .user-bar select {
+      background: var(--bg);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 0.4rem 0.8rem;
+      font-family: var(--font);
+      font-size: 0.9rem;
+      cursor: pointer;
+      outline: none;
+    }
+
+    .user-bar select:focus { border-color: var(--green); }
+
+    /* ── Cartes de stats rapides ── */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    .stat-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.2rem 1.5rem;
+    }
+
+    .stat-label {
+      font-size: 0.7rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 0.5rem;
+    }
+
+    .stat-value {
+      font-size: 1.8rem;
+      font-weight: bold;
+      line-height: 1;
+    }
+
+    .stat-value.green  { color: var(--green); }
+    .stat-value.blue   { color: var(--blue); }
+    .stat-value.orange { color: var(--orange); }
+    .stat-value.red    { color: var(--red); }
+
+    .stat-sub {
+      font-size: 0.7rem;
+      color: var(--muted);
+      margin-top: 0.3rem;
+    }
+
+    /* ── Grille des graphiques ── */
+    .charts-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: auto auto;
+      gap: 1.5rem;
+    }
+
+    .chart-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.5rem;
+    }
+
+    /* Le graphique IMC prend toute la largeur */
+    .chart-card.full { grid-column: 1 / -1; }
+
+    .chart-title {
+      font-size: 0.75rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 1.2rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .chart-title::before {
+      content: '';
+      display: inline-block;
+      width: 6px;
+      height: 6px;
+      background: var(--green);
+      border-radius: 50%;
+    }
+
+    .chart-wrap {
+      position: relative;
+      height: 260px;
+    }
+
+    /* ── Message vide ── */
+    .empty {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 200px;
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+
+    /* ── IMC badge ── */
+    .bmi-badge {
+      display: inline-block;
+      padding: 0.2rem 0.6rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: bold;
+      margin-left: 0.5rem;
+    }
+    .bmi-normal   { background: #00e67622; color: var(--green); }
+    .bmi-over     { background: #ffa72622; color: var(--orange); }
+    .bmi-under    { background: #29b6f622; color: var(--blue); }
+    .bmi-obese    { background: #ef535022; color: var(--red); }
+  </style>
+</head>
+<body>
+
+  <!-- ── Header ── -->
+  <header>
+    <div class="logo">FITNESS<span>_DASHBOARD</span></div>
+    <div class="refresh-bar">
+      <span id="refresh-label">Refresh dans <span id="countdown">30</span>s</span>
+      <div class="refresh-progress">
+        <div class="refresh-fill" id="refresh-fill" style="width:100%"></div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ── Sélecteur utilisateur ── -->
+  <div class="user-bar">
+    <label>Utilisateur</label>
+    <select id="user-select" onchange="onUserChange()">
+      <option value="">— Sélectionner —</option>
+    </select>
+    <span id="bmi-display"></span>
+  </div>
+
+  <!-- ── Stats rapides ── -->
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="stat-label">Séances cette semaine</div>
+      <div class="stat-value green" id="stat-count">—</div>
+      <div class="stat-sub">sessions</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Minutes cette semaine</div>
+      <div class="stat-value blue" id="stat-min">—</div>
+      <div class="stat-sub">minutes</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Calories cette semaine</div>
+      <div class="stat-value orange" id="stat-kcal">—</div>
+      <div class="stat-sub">kcal brûlées</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Séances ce mois</div>
+      <div class="stat-value" id="stat-month" style="color:var(--text)">—</div>
+      <div class="stat-sub">sessions</div>
+    </div>
+  </div>
+
+  <!-- ── Graphiques ── -->
+  <div class="charts-grid">
+
+    <!-- Graphique 1 : Minutes par jour -->
+    <div class="chart-card">
+      <div class="chart-title">Minutes par jour de la semaine</div>
+      <div class="chart-wrap">
+        <canvas id="chart-bar"></canvas>
+      </div>
+    </div>
+
+    <!-- Graphique 2 : Répartition par activité -->
+    <div class="chart-card">
+      <div class="chart-title">Répartition par activité</div>
+      <div class="chart-wrap">
+        <canvas id="chart-doughnut"></canvas>
+      </div>
+    </div>
+
+    <!-- Graphique 3 : Évolution IMC (pleine largeur) -->
+    <div class="chart-card full">
+      <div class="chart-title">Évolution de l'IMC dans le temps</div>
+      <div class="chart-wrap">
+        <canvas id="chart-line"></canvas>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // ═══════════════════════════════════════════════════════
+    //  CONFIG
+    // ═══════════════════════════════════════════════════════
+    const API       = "http://127.0.0.1:5000";
+    const REFRESH_S = 30;
+
+    // Jours de la semaine (lundi = index 0)
+    const DAYS = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"];
+
+    // Couleurs pour le doughnut
+    const COLORS = ["#00e676","#29b6f6","#ffa726","#ef5350","#ab47bc","#26c6da","#d4e157"];
+
+    // Instances Chart.js (pour pouvoir les détruire avant de les recréer)
+    let chartBar      = null;
+    let chartDoughnut = null;
+    let chartLine     = null;
+
+    // ═══════════════════════════════════════════════════════
+    //  CHARGEMENT DES UTILISATEURS
+    // ═══════════════════════════════════════════════════════
+    async function loadUsers() {
+      try {
+        const res   = await fetch(`${API}/api/users`);
+        const json  = await res.json();
+        const sel   = document.getElementById("user-select");
+
+        // Garde l'utilisateur actuellement sélectionné
+        const currentId = sel.value;
+
+        // Vide et reremplit le select
+        sel.innerHTML = '<option value="">— Sélectionner —</option>';
+        json.data.forEach(u => {
+          const opt    = document.createElement("option");
+          opt.value    = u.id;
+          opt.textContent = `${u.name} (IMC ${u.bmi.toFixed(1)})`;
+          sel.appendChild(opt);
+        });
+
+        // Restaure la sélection si possible
+        if (currentId) sel.value = currentId;
+
+      } catch (e) {
+        console.error("Erreur chargement users :", e);
+      }
+    }
+
+    // ═══════════════════════════════════════════════════════
+    //  CHARGEMENT DES DONNÉES D'UN UTILISATEUR
+    // ═══════════════════════════════════════════════════════
+    async function loadUserData(userId) {
+      try {
+        // Appels parallèles pour aller plus vite
+        const [resUser, resStats, resBmi, resSessions] = await Promise.all([
+          fetch(`${API}/api/users/${userId}`),
+          fetch(`${API}/api/users/${userId}/stats`),
+          fetch(`${API}/api/users/${userId}/bmi-history`),
+          fetch(`${API}/api/sessions?user_id=${userId}`)
+        ]);
+
+        const user     = (await resUser.json()).data;
+        const stats    = (await resStats.json()).data;
+        const bmiHist  = (await resBmi.json()).data;
+        const sessions = (await resSessions.json()).data;
+
+        updateStatCards(user, stats);
+        updateBmiDisplay(user);
+        drawBarChart(sessions);
+        drawDoughnutChart(stats.weekly.by_type);
+        drawLineChart(bmiHist);
+
+      } catch (e) {
+        console.error("Erreur chargement données :", e);
+      }
+    }
+
+    // ═══════════════════════════════════════════════════════
+    //  MISE À JOUR DES CARTES DE STATS
+    // ═══════════════════════════════════════════════════════
+    function updateStatCards(user, stats) {
+      document.getElementById("stat-count").textContent  = stats.weekly.count;
+      document.getElementById("stat-min").textContent    = stats.weekly.total_min;
+      document.getElementById("stat-kcal").textContent   = Math.round(stats.weekly.total_kcal);
+      document.getElementById("stat-month").textContent  = stats.monthly.count;
+    }
+
+    function updateBmiDisplay(user) {
+      const bmi   = user.bmi.toFixed(1);
+      const label = user.bmi_category;
+      let cls = "bmi-normal";
+      if (label.includes("Insuffisance")) cls = "bmi-under";
+      else if (label.includes("Surpoids"))    cls = "bmi-over";
+      else if (label.includes("Obésité"))     cls = "bmi-obese";
+
+      document.getElementById("bmi-display").innerHTML =
+        `IMC : <strong>${bmi}</strong>
+         <span class="bmi-badge ${cls}">${label}</span>`;
+    }
+
+    // ═══════════════════════════════════════════════════════
+    //  GRAPHIQUE 1 — MINUTES PAR JOUR (BAR)
+    // ═══════════════════════════════════════════════════════
+    function drawBarChart(sessions) {
+      // Calcule les minutes par jour de la semaine courante
+      const today  = new Date();
+      const monday = new Date(today);
+      monday.setDate(today.getDate() - today.getDay() + 1);
+
+      // Initialise à 0 pour chaque jour
+      const minutesByDay = [0, 0, 0, 0, 0, 0, 0];
+
+      sessions.forEach(s => {
+        const d   = new Date(s.date);
+        const day = d.getDay(); // 0=dim, 1=lun, ...
+        // Convertit en index lundi=0
+        const idx = (day === 0) ? 6 : day - 1;
+
+        // Vérifie si c'est dans la semaine courante
+        const diffDays = Math.round((d - monday) / 86400000);
+        if (diffDays >= 0 && diffDays <= 6) {
+          minutesByDay[idx] += s.duration_min;
+        }
+      });
+
+      if (chartBar) chartBar.destroy();
+
+      chartBar = new Chart(document.getElementById("chart-bar"), {
+        type: "bar",
+        data: {
+          labels: DAYS,
+          datasets: [{
+            label: "Minutes",
+            data: minutesByDay,
+            backgroundColor: minutesByDay.map(v =>
+              v > 0 ? "#00e67644" : "#1f2d40"
+            ),
+            borderColor: minutesByDay.map(v =>
+              v > 0 ? "#00e676" : "#1f2d40"
+            ),
+            borderWidth: 1,
+            borderRadius: 4,
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: {
+              ticks: { color: "#64748b", font: { family: "Courier New" } },
+              grid:  { color: "#1f2d40" }
+            },
+            y: {
+              beginAtZero: true,
+              ticks: { color: "#64748b", font: { family: "Courier New" } },
+              grid:  { color: "#1f2d40" }
+            }
+          }
+        }
+      });
+    }
+
+    // ═══════════════════════════════════════════════════════
+    //  GRAPHIQUE 2 — RÉPARTITION PAR ACTIVITÉ (DOUGHNUT)
+    // ═══════════════════════════════════════════════════════
+    function drawDoughnutChart(byType) {
+      const labels = Object.keys(byType);
+      const values = labels.map(k => byType[k].total_min);
+
+      if (chartDoughnut) chartDoughnut.destroy();
+
+      if (labels.length === 0) {
+        document.getElementById("chart-doughnut").parentElement.innerHTML =
+          '<div class="empty">Aucune séance cette semaine</div>';
+        return;
+      }
+
+      chartDoughnut = new Chart(document.getElementById("chart-doughnut"), {
+        type: "doughnut",
+        data: {
+          labels,
+          datasets: [{
+            data: values,
+            backgroundColor: COLORS.slice(0, labels.length),
+            borderColor: "#111827",
+            borderWidth: 2,
+            hoverOffset: 8,
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          cutout: "65%",
+          plugins: {
+            legend: {
+              position: "right",
+              labels: {
+                color: "#e2e8f0",
+                font: { family: "Courier New", size: 11 },
+                padding: 16,
+              }
+            },
+            tooltip: {
+              callbacks: {
+                label: ctx =>
+                  ` ${ctx.label} : ${ctx.parsed} min`
+              }
+            }
+          }
+        }
+      });
+    }
+
+    // ═══════════════════════════════════════════════════════
+    //  GRAPHIQUE 3 — ÉVOLUTION IMC (LINE)
+    // ═══════════════════════════════════════════════════════
+    function drawLineChart(bmiHistory) {
+      if (chartLine) chartLine.destroy();
+
+      if (bmiHistory.length === 0) {
+        document.getElementById("chart-line").parentElement.innerHTML =
+          '<div class="empty">Pas encore d\'historique IMC</div>';
+        return;
+      }
+
+      const labels = bmiHistory.map(e => e.date);
+      const values = bmiHistory.map(e => e.bmi);
+
+      chartLine = new Chart(document.getElementById("chart-line"), {
+        type: "line",
+        data: {
+          labels,
+          datasets: [{
+            label: "IMC",
+            data: values,
+            borderColor: "#00e676",
+            backgroundColor: "#00e67615",
+            pointBackgroundColor: "#00e676",
+            pointBorderColor: "#0a0e1a",
+            pointRadius: 5,
+            pointHoverRadius: 7,
+            fill: true,
+            tension: 0.3,
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: ctx => ` IMC : ${ctx.parsed.y.toFixed(2)}`
+              }
+            }
+          },
+          scales: {
+            x: {
+              ticks: { color: "#64748b", font: { family: "Courier New" } },
+              grid:  { color: "#1f2d40" }
+            },
+            y: {
+              ticks: { color: "#64748b", font: { family: "Courier New" } },
+              grid:  { color: "#1f2d40" },
+              // Lignes de référence OMS
+              afterDataLimits(scale) {
+                scale.min = Math.min(scale.min, 15);
+                scale.max = Math.max(scale.max, 35);
+              }
+            }
+          }
+        }
+      });
+    }
+
+    // ═══════════════════════════════════════════════════════
+    //  GESTION DU CHANGEMENT D'UTILISATEUR
+    // ═══════════════════════════════════════════════════════
+    function onUserChange() {
+      const userId = document.getElementById("user-select").value;
+      if (!userId) return;
+      loadUserData(userId);
+    }
+
+    // ═══════════════════════════════════════════════════════
+    //  RAFRAÎCHISSEMENT AUTOMATIQUE (30 secondes)
+    // ═══════════════════════════════════════════════════════
+    let countdown  = REFRESH_S;
+    const fillEl   = document.getElementById("refresh-fill");
+    const countEl  = document.getElementById("countdown");
+
+    setInterval(() => {
+      countdown--;
+      countEl.textContent = countdown;
+      fillEl.style.width  = `${(countdown / REFRESH_S) * 100}%`;
+
+      if (countdown <= 0) {
+        countdown = REFRESH_S;
+        // Recharge les utilisateurs et les données
+        loadUsers().then(() => {
+          const userId = document.getElementById("user-select").value;
+          if (userId) loadUserData(userId);
+        });
+      }
+    }, 1000);
+
+    // ═══════════════════════════════════════════════════════
+    //  INITIALISATION AU CHARGEMENT DE LA PAGE
+    // ═══════════════════════════════════════════════════════
+    loadUsers();
+  </script>
+</body>
+</html>
