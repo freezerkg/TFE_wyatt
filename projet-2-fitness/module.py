@@ -605,3 +605,40 @@ def list_activites() -> list:
             "SELECT * FROM activite ORDER BY id"
         ).fetchall()
     return [dict(row) for row in rows]
+
+
+def save_activite(data: dict) -> dict:
+    """
+    Ajoute une nouvelle activité dans la table activite.
+    data : {"nom", "met_base"}
+    Recharge automatiquement la table MET dans le C après insertion.
+    Retourne le dict de l'activité créée.
+    """
+    if not data.get("nom", "").strip():
+        raise ValueError("Le nom de l'activité est obligatoire.")
+    if data.get("met_base", 0) <= 0:
+        raise ValueError("Le MET de base doit être positif.")
+
+    with _get_conn() as conn:
+        # Vérifie que le nom n'existe pas déjà (UNIQUE KEY)
+        existing = conn.execute(
+            "SELECT id FROM activite WHERE nom = ?",
+            (data["nom"].strip(),)
+        ).fetchone()
+        if existing:
+            raise ValueError(f"L'activité '{data['nom']}' existe déjà.")
+
+        cur = conn.execute(
+            "INSERT INTO activite (nom, met_base) VALUES (?, ?)",
+            (data["nom"].strip(), data["met_base"])
+        )
+        activite_id = cur.lastrowid
+
+    # Recharge la table MET dans le C pour inclure la nouvelle activité
+    build_met_table()
+
+    with _get_conn() as conn:
+        row = conn.execute(
+            "SELECT * FROM activite WHERE id = ?", (activite_id,)
+        ).fetchone()
+    return dict(row)

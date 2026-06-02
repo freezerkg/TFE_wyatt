@@ -245,6 +245,29 @@ def get_activites():
         return error(str(e), 500)
 
 
+@app.route("/api/activites", methods=["POST"])
+def create_activite():
+    """
+    POST /api/activites
+    Ajoute une nouvelle activité dans la DB.
+    Body JSON : {"nom": "boxe", "met_base": 9.0}
+    Recharge automatiquement la table MET dans le C.
+    Code 201 si créée, 400 si données invalides.
+    """
+    try:
+        data = request.get_json()
+        if not data:
+            return error("Body JSON manquant.", 400)
+
+        activite = module.save_activite(data)
+        return ok(activite, 201)
+
+    except ValueError as e:
+        return error(str(e), 400)
+    except Exception as e:
+        return error(str(e), 500)
+
+
 # ═══════════════════════════════════════════════════════════════
 #  7. DASHBOARD
 # ═══════════════════════════════════════════════════════════════
@@ -269,4 +292,4 @@ if __name__ == "__main__":
     print("  http://localhost:5000/api/users")
     print("  http://localhost:5000/dashboard")
     print("=" * 50)
-    app.run(debug=True, port=5000)
+    app.run(debug=False, host="127.0.0.1", port=5000)
