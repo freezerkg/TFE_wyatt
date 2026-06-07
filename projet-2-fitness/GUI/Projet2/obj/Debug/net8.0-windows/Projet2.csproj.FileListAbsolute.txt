@@ -1,0 +1,14 @@
+D:\2025-2026\info\TFE\projet-2-fitness\GUI\Projet2\bin\Debug\net8.0-windows\Projet2.exe
+D:\2025-2026\info\TFE\projet-2-fitness\GUI\Projet2\bin\Debug\net8.0-windows\Projet2.deps.json
+D:\2025-2026\info\TFE\projet-2-fitness\GUI\Projet2\bin\Debug\net8.0-windows\Projet2.runtimeconfig.json
+D:\2025-2026\info\TFE\projet-2-fitness\GUI\Projet2\bin\Debug\net8.0-windows\Projet2.dll
+D:\2025-2026\info\TFE\projet-2-fitness\GUI\Projet2\bin\Debug\net8.0-windows\Projet2.pdb
+D:\2025-2026\info\TFE\projet-2-fitness\GUI\Projet2\obj\Debug\net8.0-windows\Projet2.GeneratedMSBuildEditorConfig.editorconfig
+D:\2025-2026\info\TFE\projet-2-fitness\GUI\Projet2\obj\Debug\net8.0-windows\Projet2.AssemblyInfoInputs.cache
+D:\2025-2026\info\TFE\projet-2-fitness\GUI\Projet2\obj\Debug\net8.0-windows\Projet2.AssemblyInfo.cs
+D:\2025-2026\info\TFE\projet-2-fitness\GUI\Projet2\obj\Debug\net8.0-windows\Projet2.csproj.CoreCompileInputs.cache
+D:\2025-2026\info\TFE\projet-2-fitness\GUI\Projet2\obj\Debug\net8.0-windows\Projet2.dll
+D:\2025-2026\info\TFE\projet-2-fitness\GUI\Projet2\obj\Debug\net8.0-windows\refint\Projet2.dll
+D:\2025-2026\info\TFE\projet-2-fitness\GUI\Projet2\obj\Debug\net8.0-windows\Projet2.pdb
+D:\2025-2026\info\TFE\projet-2-fitness\GUI\Projet2\obj\Debug\net8.0-windows\Projet2.genruntimeconfig.cache
+D:\2025-2026\info\TFE\projet-2-fitness\GUI\Projet2\obj\Debug\net8.0-windows\ref\Projet2.dll

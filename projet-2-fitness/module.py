@@ -116,6 +116,13 @@ def init_db():
                 met_base REAL    NOT NULL
             );
 
+            CREATE TABLE IF NOT EXISTS weight_history (
+                id         INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id    INTEGER NOT NULL REFERENCES users(id),
+                date       TEXT    NOT NULL,
+                weight_kg  REAL    NOT NULL
+            );
+
             CREATE TABLE IF NOT EXISTS sessions (
                 id           INTEGER PRIMARY KEY AUTOINCREMENT,
                 user_id      INTEGER NOT NULL REFERENCES users(id),
@@ -377,27 +384,13 @@ def list_users() -> list:
 # ═══════════════════════════════════════════════════════════════
 
 def add_session(user_id: int, data: dict) -> dict:
-    """
-    Ajoute une séance sportive pour un utilisateur.
-
-    data : {
-        "activite_id"  : int   (référence table activite),
-        "duration_min" : int,
-        "intensity"    : float (optionnel, défaut 1.0),
-        "date"         : str   "YYYY-MM-DD" (optionnel, défaut aujourd'hui)
-    }
-
-    Les calories sont calculées côté serveur via la DLL C.
-    Retourne le dict de la séance créée.
-    """
-    user = get_user(user_id)   # valide que l'utilisateur existe
+    user = get_user(user_id) 
 
     activite_id  = data.get("activite_id")
     duration_min = data.get("duration_min")
     intensity    = data.get("intensity", 1.0)
     session_date = data.get("date", date.today().isoformat())
 
-    # Validation Python
     if activite_id is None:
         raise ValueError("activite_id est obligatoire.")
     if duration_min is None or duration_min <= 0:
@@ -405,7 +398,6 @@ def add_session(user_id: int, data: dict) -> dict:
     if intensity <= 0:
         raise ValueError("L'intensité doit être positive.")
 
-    # Vérification que l'activité existe en DB
     with _get_conn() as conn:
         activite = conn.execute(
             "SELECT * FROM activite WHERE id = ?", (activite_id,)
@@ -413,16 +405,12 @@ def add_session(user_id: int, data: dict) -> dict:
     if activite is None:
         raise ValueError(f"activite_id {activite_id} introuvable.")
 
-    # Validation du format de date
     try:
         datetime.strptime(session_date, "%Y-%m-%d")
     except ValueError:
-        raise ValueError(f"Format de date invalide : {session_date} (attendu YYYY-MM-DD)")
+        raise ValueError(f"Format de date invalide : {session_date}")
 
-    # Calcul du MET ajusté via la DLL C (table fournie par Python)
     met_ajuste = met_for_activity(activite_id, intensity)
-
-    # Calcul des calories via la DLL C
     kcal = calories_burned(user["weight_kg"], met_ajuste, duration_min)
 
     with _get_conn() as conn:
@@ -434,6 +422,7 @@ def add_session(user_id: int, data: dict) -> dict:
              session_date, round(kcal, 2))
         )
         session_id = cur.lastrowid
+        conn.commit()  # Valide l'insertion dans la DB
 
     return _get_session(session_id)
 
@@ -567,31 +556,68 @@ def monthly_stats(user_id: int) -> dict:
     }
 
 
+def save_weight(user_id: int, weight_kg: float, date_str: str = None) -> dict:
+    """
+    Enregistre une mesure de poids pour un utilisateur.
+    Permet de construire un vrai historique pondéral.
+    date_str : "YYYY-MM-DD" (défaut : aujourd'hui)
+    """
+    get_user(user_id)   # valide l'existence
+
+    if weight_kg <= 0:
+        raise ValueError("Le poids doit être positif.")
+
+    if date_str is None:
+        date_str = date.today().isoformat()
+
+    try:
+        datetime.strptime(date_str, "%Y-%m-%d")
+    except ValueError:
+        raise ValueError(f"Format de date invalide : {date_str}")
+
+    with _get_conn() as conn:
+        conn.execute(
+            "INSERT INTO weight_history (user_id, date, weight_kg) VALUES (?, ?, ?)",
+            (user_id, date_str, weight_kg)
+        )
+
+    return {"user_id": user_id, "date": date_str, "weight_kg": weight_kg}
+
+
 def bmi_history(user_id: int) -> list:
     """
-    Retourne l'historique IMC de l'utilisateur dans l'ordre chronologique.
-    L'IMC est recalculé à partir du poids enregistré lors de chaque séance.
+    Retourne l'historique IMC dans l'ordre chronologique.
+    Utilise weight_history si disponible pour un vrai historique pondéral.
+    Sinon, utilise le poids actuel de l'utilisateur.
 
     Retourne : [(date, bmi), ...]
-
-    Note : comme le poids actuel est stocké dans users (pas dans sessions),
-    on retourne l'IMC courant pour chaque date de séance.
-    Pour un vrai historique pondéral, il faudrait une table weight_history.
     """
     user = get_user(user_id)
 
     with _get_conn() as conn:
-        rows = conn.execute(
-            """SELECT DISTINCT date
-               FROM sessions
-               WHERE user_id = ?
-               ORDER BY date ASC""",
+        # Vérifie si on a un historique pondéral
+        weights = conn.execute(
+            """SELECT date, weight_kg FROM weight_history
+               WHERE user_id = ? ORDER BY date ASC""",
             (user_id,)
         ).fetchall()
 
-    # IMC calculé avec le poids actuel de l'utilisateur
-    bmi = calc_bmi(user["weight_kg"], user["height_m"])
-    return [(row["date"], round(bmi, 2)) for row in rows]
+    if weights:
+        # Vrai historique : IMC calculé avec le poids de chaque mesure
+        return [
+            (row["date"], round(calc_bmi(row["weight_kg"], user["height_m"]), 2))
+            for row in weights
+        ]
+    else:
+        # Fallback : IMC courant pour chaque date de séance
+        with _get_conn() as conn:
+            rows = conn.execute(
+                """SELECT DISTINCT date FROM sessions
+                   WHERE user_id = ? ORDER BY date ASC""",
+                (user_id,)
+            ).fetchall()
+        bmi = calc_bmi(user["weight_kg"], user["height_m"])
+        return [(row["date"], round(bmi, 2)) for row in rows]
 
 
 # ═══════════════════════════════════════════════════════════════
