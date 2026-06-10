@@ -1,8 +1,13 @@
 {
   "version": 2,
-  "dgSpecHash": "EmCDT1vterw=",
+  "dgSpecHash": "kF90RkK9Efw=",
   "success": true,
-  "projectFilePath": "D:\\2025-2026\\info\\TFE\\projet-2-fitness\\GUI\\Projet2\\Projet2.csproj",
-  "expectedPackageFiles": [],
+  "projectFilePath": "C:\\Users\\10RomWya52\\Desktop\\TFE_wyatt\\projet-2-fitness\\GUI\\Projet2\\Projet2.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\10RomWya52\\.nuget\\packages\\microsoft.netcore.app.ref\\8.0.26\\microsoft.netcore.app.ref.8.0.26.nupkg.sha512",
+    "C:\\Users\\10RomWya52\\.nuget\\packages\\microsoft.windowsdesktop.app.ref\\8.0.26\\microsoft.windowsdesktop.app.ref.8.0.26.nupkg.sha512",
+    "C:\\Users\\10RomWya52\\.nuget\\packages\\microsoft.aspnetcore.app.ref\\8.0.26\\microsoft.aspnetcore.app.ref.8.0.26.nupkg.sha512",
+    "C:\\Users\\10RomWya52\\.nuget\\packages\\microsoft.netcore.app.host.win-x64\\8.0.26\\microsoft.netcore.app.host.win-x64.8.0.26.nupkg.sha512"
+  ],
   "logs": []
 }
